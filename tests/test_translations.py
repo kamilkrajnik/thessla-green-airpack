@@ -13,6 +13,14 @@ from custom_components.thessla_green_airpack import (
     switch,
 )
 from custom_components.thessla_green_airpack import time as time_platform
+from custom_components.thessla_green_airpack.const import (
+    CONF_CONNECTION_TYPE,
+    CONF_EQUIPMENT,
+    CONF_SPECIAL_FUNCTIONS,
+    CONNECTION_TYPES,
+    EQUIPMENT,
+    SPECIAL_FUNCTIONS,
+)
 
 BASE = Path(__file__).parent.parent / "custom_components" / "thessla_green_airpack"
 LANGS = {
@@ -51,6 +59,20 @@ def test_entities_translated(lang: str) -> None:
     for platform, keys in EXTRA.items():
         for key in keys:
             assert key in entity[platform], f"{lang}: {platform}.{key}"
+
+
+@pytest.mark.parametrize("lang", LANGS)
+def test_config_flow_translated(lang: str) -> None:
+    config, selector = LANGS[lang]["config"], LANGS[lang]["selector"]
+    for step in ("user", "reconfigure"):
+        assert CONF_CONNECTION_TYPE in config["step"][step]["data"], f"{lang}: {step}.{CONF_CONNECTION_TYPE}"
+    for key, values in {
+        CONF_CONNECTION_TYPE: CONNECTION_TYPES,
+        CONF_SPECIAL_FUNCTIONS: SPECIAL_FUNCTIONS,
+        CONF_EQUIPMENT: EQUIPMENT,
+    }.items():
+        for value in values:
+            assert value in selector[key]["options"], f"{lang}: selector {key}.{value}"
 
 
 @pytest.mark.parametrize("lang", LANGS)

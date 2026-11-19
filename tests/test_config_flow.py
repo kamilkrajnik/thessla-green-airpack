@@ -1,17 +1,22 @@
 """Config / options / reconfigure flow tests."""
 
+from pymodbus import FramerType
+
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.thessla_green_airpack.const import (
+    CONF_CONNECTION_TYPE,
     CONF_MODEL,
     CONF_READ_ONLY,
     CONF_REQUEST_DELAY,
     CONF_SCAN_INTERVAL,
     CONF_TIMEOUT,
     CONF_UNIT_ID,
+    CONNECTION_MODBUS_TCP,
+    CONNECTION_RTU_OVER_TCP,
     DOMAIN,
 )
 
@@ -41,7 +46,30 @@ async def test_user_flow_success(hass: HomeAssistant, fake) -> None:
     assert result["title"] == "Rekuperator"
     assert result["result"].unique_id == SERIAL
     assert result["data"][CONF_UNIT_ID] == 10
+    assert result["data"][CONF_CONNECTION_TYPE] == CONNECTION_MODBUS_TCP
     assert CONF_NAME not in result["data"]
+    assert {k["framer"] for k in fake.client_kwargs} == {FramerType.SOCKET}
+
+
+async def test_user_flow_rtu_over_tcp(hass: HomeAssistant, fake) -> None:
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_CONNECTION_TYPE: CONNECTION_RTU_OVER_TCP}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_CONNECTION_TYPE] == CONNECTION_RTU_OVER_TCP
+    # Both the validation client and the one set up for the entry use the RTU framer.
+    assert {k["framer"] for k in fake.client_kwargs} == {FramerType.RTU}
+
+
+async def test_user_flow_validates_with_selected_transport(hass: HomeAssistant, fake) -> None:
+    fake.online = False
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**USER_INPUT, CONF_CONNECTION_TYPE: CONNECTION_RTU_OVER_TCP}
+    )
+    assert result["errors"] == {"base": "cannot_connect"}
+    assert [k["framer"] for k in fake.client_kwargs] == [FramerType.RTU]
 
 
 async def test_user_flow_cannot_connect(hass: HomeAssistant, fake) -> None:
@@ -93,3 +121,32 @@ async def test_reconfigure(hass: HomeAssistant, fake) -> None:
     assert result["reason"] == "reconfigure_successful"
     assert entry.data[CONF_HOST] == "192.0.2.99"
     assert entry.data[CONF_PORT] == 8899
+    assert entry.data[CONF_CONNECTION_TYPE] == CONNECTION_MODBUS_TCP
+
+
+async def test_reconfigure_connection_type(hass: HomeAssistant, fake) -> None:
+    entry = await setup_entry(hass)
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_HOST: "192.0.2.10",
+            CONF_PORT: 502,
+            CONF_UNIT_ID: 10,
+            CONF_CONNECTION_TYPE: CONNECTION_RTU_OVER_TCP,
+        },
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+    assert entry.data[CONF_CONNECTION_TYPE] == CONNECTION_RTU_OVER_TCP
+    assert entry.runtime_data.client.framer is FramerType.RTU
+
+
+async def test_entry_without_connection_type_loads_as_modbus_tcp(hass: HomeAssistant, fake) -> None:
+    entry = await setup_entry(hass)  # created before the option existed: no key in data
+    assert CONF_CONNECTION_TYPE not in entry.data
+    client = entry.runtime_data.client
+    assert client.connection_type == CONNECTION_MODBUS_TCP
+    assert client.framer is FramerType.SOCKET
+    assert fake.client_kwargs[-1]["framer"] is FramerType.SOCKET

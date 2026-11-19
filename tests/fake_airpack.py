@@ -73,6 +73,7 @@ class FakeAirPack:
         self.unit = UNIT
         self.writes: list[tuple[int, list[int]]] = []
         self.reads = 0
+        self.client_kwargs: list[dict] = []  # kwargs of every AsyncModbusTcpClient(...) call
 
     # -- device behaviour ---------------------------------------------------------
     def _apply_write(self, address: int, values: list[int]) -> int | None:
@@ -92,6 +93,7 @@ class FakeAirPack:
         return None
 
     def client_factory(self, host, **kwargs):
+        self.client_kwargs.append(kwargs)
         return FakeModbusClient(self)
 
 
