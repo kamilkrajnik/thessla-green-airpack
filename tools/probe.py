@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only probe for Thessla Green AirPack4 devices over Modbus TCP.
+"""Read-only probe for Thessla Green AirPack4 devices over Modbus TCP or RTU over TCP.
 
 Dumps every register from the integration's register map (decoded), the
 readable block layout and the list of unsupported addresses. Useful for
@@ -11,7 +11,7 @@ This tool CANNOT write to the device:
   * every outgoing PDU is checked: only function codes 1-4 may be sent
 
 Usage:
-  python -I tools/probe.py --host 192.168.1.50 [--port 502] [--unit 10] [--json probe-out.json]
+  python -I tools/probe.py --host 192.168.1.50 [--port 502] [--unit 10] [--rtu-over-tcp] [--json probe-out.json]
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from pathlib import Path
 import sys
 import types
 
+from pymodbus import FramerType
 from pymodbus.client import AsyncModbusTcpClient
 
 PKG_DIR = Path(__file__).resolve().parent.parent / "custom_components" / "thessla_green_airpack"
@@ -67,8 +68,10 @@ def _guard_pdu(sending: bool, pdu):
 class ReadOnlyModbus:
     """Proxy exposing only connection + read methods of a pymodbus client."""
 
-    def __init__(self, host: str, port: int, timeout: float) -> None:
-        kwargs = {"port": port, "timeout": timeout, "retries": 1, "reconnect_delay": 0}
+    def __init__(self, host: str, port: int, timeout: float, rtu_over_tcp: bool = False) -> None:
+        # Transparent gateway: raw RTU frames over the socket instead of Modbus TCP.
+        framer = FramerType.RTU if rtu_over_tcp else FramerType.SOCKET
+        kwargs = {"port": port, "framer": framer, "timeout": timeout, "retries": 1, "reconnect_delay": 0}
         try:
             client = AsyncModbusTcpClient(host, trace_pdu=_guard_pdu, **kwargs)
         except TypeError:  # very old pymodbus without trace hooks
@@ -120,7 +123,7 @@ class Reader:
 
 
 async def probe(args) -> dict:
-    modbus = ReadOnlyModbus(args.host, args.port, args.timeout)
+    modbus = ReadOnlyModbus(args.host, args.port, args.timeout, args.rtu_over_tcp)
     if not await modbus.connect():
         raise SystemExit(f"Cannot connect to {args.host}:{args.port}")
     reader = Reader(modbus, args.unit, args.delay / 1000)
@@ -188,6 +191,9 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=502)
     parser.add_argument("--unit", type=int, default=10)
     parser.add_argument("--timeout", type=float, default=3.0)
+    parser.add_argument(
+        "--rtu-over-tcp", action="store_true", help="transparent gateway: send raw RTU frames over TCP"
+    )
     parser.add_argument("--delay", type=float, default=0, help="delay between requests, ms")
     parser.add_argument("--max-gap", type=int, default=8)
     parser.add_argument("--json", type=Path, help="write full result as JSON")
