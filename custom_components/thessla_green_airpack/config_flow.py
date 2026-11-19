@@ -38,6 +38,7 @@ from .client import (
 
 SERVER_DEVICE_FAILURE = 0x04
 from .const import (
+    CONF_CONNECTION_TYPE,
     CONF_EQUIPMENT,
     CONF_MODEL,
     CONF_READ_ONLY,
@@ -46,6 +47,8 @@ from .const import (
     CONF_SPECIAL_FUNCTIONS,
     CONF_TIMEOUT,
     CONF_UNIT_ID,
+    CONNECTION_TYPES,
+    DEFAULT_CONNECTION_TYPE,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_READ_ONLY,
@@ -90,14 +93,26 @@ def _connection_schema(defaults: dict[str, Any]) -> dict:
         vol.Required(CONF_HOST, default=defaults.get(CONF_HOST, "")): TextSelector(),
         vol.Required(CONF_PORT, default=defaults.get(CONF_PORT, DEFAULT_PORT)): _int_box(1, 65535),
         vol.Required(
+            CONF_CONNECTION_TYPE,
+            default=defaults.get(CONF_CONNECTION_TYPE, DEFAULT_CONNECTION_TYPE),
+        ): SelectSelector(
+            SelectSelectorConfig(
+                options=list(CONNECTION_TYPES),
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key=CONF_CONNECTION_TYPE,
+            )
+        ),
+        vol.Required(
             CONF_UNIT_ID, default=defaults.get(CONF_UNIT_ID, DEFAULT_UNIT_ID)
         ): _int_box(1, 247),
     }
 
 
-async def validate_connection(host: str, port: int, unit_id: int) -> str | None:
+async def validate_connection(
+    host: str, port: int, unit_id: int, connection_type: str = DEFAULT_CONNECTION_TYPE
+) -> str | None:
     """Connect, read firmware and serial. Returns the serial number (if any)."""
-    client = AirPackClient(host, port, unit_id, timeout=5)
+    client = AirPackClient(host, port, unit_id, connection_type=connection_type, timeout=5)
     try:
         try:
             firmware = await client.read(Table.INPUT, 0x0000, 2)
@@ -134,7 +149,10 @@ class AirPackConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _validate(self, user_input: dict[str, Any], errors: dict[str, str]) -> str | None:
         try:
             serial = await validate_connection(
-                user_input[CONF_HOST], int(user_input[CONF_PORT]), int(user_input[CONF_UNIT_ID])
+                user_input[CONF_HOST],
+                int(user_input[CONF_PORT]),
+                int(user_input[CONF_UNIT_ID]),
+                user_input[CONF_CONNECTION_TYPE],
             )
         except CannotConnect:
             errors["base"] = "cannot_connect"
@@ -163,7 +181,10 @@ class AirPackConfigFlow(ConfigFlow, domain=DOMAIN):
             if unique_id:
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured(
-                    updates={k: user_input[k] for k in (CONF_HOST, CONF_PORT, CONF_UNIT_ID)}
+                    updates={
+                        k: user_input[k]
+                        for k in (CONF_HOST, CONF_PORT, CONF_CONNECTION_TYPE, CONF_UNIT_ID)
+                    }
                 )
                 name = user_input.pop(CONF_NAME, DEFAULT_NAME) or DEFAULT_NAME
                 return self.async_create_entry(title=name, data=user_input)

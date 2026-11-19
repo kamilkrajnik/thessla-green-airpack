@@ -40,16 +40,18 @@ All AirPack4 variants covered by the manufacturer's `MODBUS_USER_AirPack_4` regi
 
 **Requirements:**
 - Home Assistant **2025.10** or newer. The integration icon needs **2026.3** or newer.
-- A Modbus TCP → RTU gateway on the same network as Home Assistant.
+- An RS485 ↔ Ethernet / Wi-Fi gateway on the same network as Home Assistant, either converting Modbus TCP ↔ RTU or transparent (RTU over TCP).
 
 ### 1. Connect the gateway
 
 1. Connect the gateway to the AirPack's RJ45 **socket no. 10, "AirMobile / Modbus RTU"**, which is the Air-B Modbus port. The Air++ panel uses socket 11, so the two don't interfere. See [Cable](#cable) below.
 2. Configure the gateway's serial side as **9600 baud, 8 data bits, no parity, 1 stop bit (8N1)**.
-3. Set the gateway protocol to **Modbus TCP ↔ RTU conversion**.
-   - **Elfin EW11 / EW10:** open the web page (default user/password `admin`/`admin`) → *Communication Settings* → *Protocol*: **Modbus**. Note the **Local Port**. The Elfin default is **8899**; many other gateways use **502**.
-   - **Waveshare:** use the *Modbus TCP to RTU* mode.
-   - Transparent / raw TCP mode is **not** supported.
+3. Decide where the Modbus TCP ↔ RTU conversion happens and pick the matching **Connection type** when adding the device. Rule of thumb: the conversion is set on **exactly one side**, either in the gateway or in the integration.
+   - **Modbus TCP** (default): the gateway converts Modbus TCP ↔ RTU itself.
+     - **Elfin EW11 / EW10:** open the web page (default user/password `admin`/`admin`) → *Communication Settings* → *Protocol*: **Modbus**. Note the **Local Port**. The Elfin default is **8899**; many other gateways use **502**.
+     - **Waveshare:** use the *Modbus TCP to RTU* mode.
+   - **RTU over TCP (transparent gateway)**: the gateway is a plain serial ↔ TCP bridge (*transparent*, *raw TCP* or *TCP server* mode; Elfin *Protocol*: **None**) and the integration builds the Modbus RTU frames itself. Use it when the gateway has no Modbus conversion, e.g. older Waveshare RS485 TO ETH firmware (V4019).
+   - Conversion on both sides, or on neither, does not work: the AirPack does not answer.
 4. Give the gateway a fixed IP address, for example with a DHCP reservation in your router.
 5. The AirPack's Modbus device address is **10** by default (allowed range 10–19).
 
@@ -102,12 +104,13 @@ If you upgrade Home Assistant to 2026.11, an installation made through HACS is t
 | Name | Anything, e.g. `Recuperator` |
 | Gateway host / IP | The gateway's IP address, e.g. `192.168.1.50` |
 | TCP port | The gateway's Modbus port: `8899` (Elfin default) or `502` |
+| Connection type | **Modbus TCP** if the gateway converts Modbus TCP ↔ RTU, **RTU over TCP (transparent gateway)** if it is in transparent / raw TCP mode. See [Connect the gateway](#1-connect-the-gateway) |
 | Modbus device address | `10`, unless changed on the unit |
 | Model | Your AirPack4 variant. It only sets the device name; hardware is detected automatically |
 
 The first setup takes a few seconds while the integration checks which registers your unit has.
 
-To change the IP, port or address later: *Devices & services → Thessla Green AirPack4 → ⋮ → Reconfigure*.
+To change the IP, port, address or connection type later: *Devices & services → Thessla Green AirPack4 → ⋮ → Reconfigure*.
 
 ### 4. Options
 
@@ -243,7 +246,7 @@ New versions are published as [GitHub releases](https://github.com/BartoszJanows
   - Check the device address (10).
   - Check A/B wiring (try swapping A and B).
   - Check the gateway serial settings (9600 8N1).
-  - Make sure the gateway is in Modbus TCP→RTU mode.
+  - Make sure the *Connection type* matches the gateway mode: *Modbus TCP* for a converting gateway, *RTU over TCP* for a transparent one. The conversion must be on exactly one side.
 - **Entities briefly become *Unavailable*:** increase *Delay between requests* and *Request timeout*. Don't connect two Modbus clients to the same gateway at once (for example an old integration and this one).
 - **Entity names are in English although the interface is in Polish:** entity names follow the *system* language (*Settings → System → General → Language*), not your profile language. Set it to Polski and restart.
 - **The card can't be found:** hard-refresh the browser. In the mobile app, pull down to reload.
@@ -257,6 +260,8 @@ New versions are published as [GitHub releases](https://github.com/BartoszJanows
     pip install pymodbus
     python -I tools/probe.py --host 192.168.1.50 --port 8899 --unit 10 --json probe-out.json
     ```
+
+    Add `--rtu-over-tcp` for a transparent gateway.
 
 ### 9. Reporting problems
 
@@ -312,16 +317,18 @@ Wszystkie odmiany AirPack4 z mapy rejestrów producenta `MODBUS_USER_AirPack_4`:
 
 **Wymagania:**
 - Home Assistant **2025.10** lub nowszy. Ikona integracji wymaga wersji **2026.3** lub nowszej.
-- Bramka Modbus TCP → RTU w tej samej sieci co Home Assistant.
+- Bramka RS485 ↔ Ethernet / Wi-Fi w tej samej sieci co Home Assistant, z konwersją Modbus TCP ↔ RTU albo transparentna (RTU przez TCP).
 
 ### 1. Podłączenie bramki
 
 1. Podłącz bramkę do gniazda RJ45 centrali **nr 10 „AirMobile / Modbus RTU”**, czyli portu Modbus Air-B. Panel Air++ korzysta z gniazda 11, więc sobie nie przeszkadzają. Zobacz [Kabel](#kabel) poniżej.
 2. Ustaw port szeregowy bramki: **9600 bodów, 8 bitów danych, bez parzystości, 1 bit stopu (8N1)**.
-3. Ustaw w bramce tryb **konwersji Modbus TCP ↔ RTU**.
-   - **Elfin EW11 / EW10:** otwórz stronę bramki (domyślnie login/hasło `admin`/`admin`) → *Communication Settings* → *Protocol*: **Modbus**. Zanotuj **Local Port**. Domyślny port Elfina to **8899**, wiele innych bramek używa **502**.
-   - **Waveshare:** wybierz tryb *Modbus TCP to RTU*.
-   - Tryb transparentny („raw TCP”) **nie** jest obsługiwany.
+3. Zdecyduj, gdzie odbywa się konwersja Modbus TCP ↔ RTU, i wybierz odpowiedni **Typ połączenia** podczas dodawania centrali. Zasada: konwersję ustawia się **dokładnie po jednej stronie**, albo w bramce, albo w integracji.
+   - **Modbus TCP** (domyślnie): bramka sama konwertuje Modbus TCP ↔ RTU.
+     - **Elfin EW11 / EW10:** otwórz stronę bramki (domyślnie login/hasło `admin`/`admin`) → *Communication Settings* → *Protocol*: **Modbus**. Zanotuj **Local Port**. Domyślny port Elfina to **8899**, wiele innych bramek używa **502**.
+     - **Waveshare:** wybierz tryb *Modbus TCP to RTU*.
+   - **RTU przez TCP (bramka transparentna)**: bramka jest zwykłym mostkiem szeregowy ↔ TCP (tryb *transparentny*, *raw TCP* lub *TCP server*; w Elfinie *Protocol*: **None**), a ramki Modbus RTU buduje integracja. Użyj tego, gdy bramka nie ma konwersji Modbus, np. starsze firmware Waveshare RS485 TO ETH (V4019).
+   - Konwersja po obu stronach naraz albo po żadnej nie działa: centrala nie odpowiada.
 4. Nadaj bramce stały adres IP, np. przez rezerwację DHCP w routerze.
 5. Adres Modbus centrali to domyślnie **10** (dozwolony zakres 10–19).
 
@@ -374,12 +381,13 @@ Po aktualizacji Home Assistanta do 2026.11 instalację z HACS automatycznie prze
 | Nazwa | Dowolna, np. `Rekuperator` |
 | Adres bramki / IP | Adres IP bramki, np. `192.168.1.50` |
 | Port TCP | Port Modbus bramki: `8899` (domyślny w Elfinie) lub `502` |
+| Typ połączenia | **Modbus TCP**, gdy bramka konwertuje Modbus TCP ↔ RTU; **RTU przez TCP (bramka transparentna)**, gdy pracuje w trybie transparentnym / raw TCP. Zobacz [Podłączenie bramki](#1-podłączenie-bramki) |
 | Adres urządzenia Modbus | `10`, chyba że zmieniono go w centrali |
 | Model | Twoja odmiana AirPack4. Wpływa tylko na nazwę urządzenia, sprzęt jest wykrywany automatycznie |
 
 Pierwsza konfiguracja trwa kilka sekund, bo integracja sprawdza, które rejestry ma Twoja centrala.
 
-Zmiana IP, portu lub adresu później: *Urządzenia oraz usługi → Thessla Green AirPack4 → ⋮ → Skonfiguruj ponownie*.
+Zmiana IP, portu, adresu lub typu połączenia później: *Urządzenia oraz usługi → Thessla Green AirPack4 → ⋮ → Skonfiguruj ponownie*.
 
 ### 4. Opcje
 
@@ -515,7 +523,7 @@ Nowe wersje są publikowane jako [wydania na GitHubie](https://github.com/Bartos
   - Sprawdź adres urządzenia (10).
   - Sprawdź okablowanie A/B (spróbuj zamienić A i B).
   - Sprawdź ustawienia portu szeregowego bramki (9600 8N1).
-  - Upewnij się, że bramka jest w trybie Modbus TCP→RTU.
+  - Upewnij się, że *Typ połączenia* odpowiada trybowi bramki: *Modbus TCP* dla bramki z konwersją, *RTU przez TCP* dla transparentnej. Konwersja musi być dokładnie po jednej stronie.
 - **Encje chwilami są *Niedostępne*:** zwiększ *Opóźnienie między zapytaniami* i *Limit czasu zapytania*. Nie podłączaj dwóch klientów Modbus do jednej bramki naraz (np. starej integracji i tej).
 - **Nazwy encji są po angielsku, choć interfejs jest po polsku:** nazwy encji zależą od języka *systemu* (*Ustawienia → System → Ogólne → Język*), a nie języka profilu. Ustaw Polski i uruchom HA ponownie.
 - **Karty nie ma na liście:** zrób twarde odświeżenie przeglądarki. W aplikacji mobilnej przeciągnij ekran w dół.
@@ -529,6 +537,8 @@ Nowe wersje są publikowane jako [wydania na GitHubie](https://github.com/Bartos
     pip install pymodbus
     python -I tools/probe.py --host 192.168.1.50 --port 8899 --unit 10 --json probe-out.json
     ```
+
+    Dla bramki transparentnej dodaj `--rtu-over-tcp`.
 
 ### 9. Zgłaszanie problemów
 

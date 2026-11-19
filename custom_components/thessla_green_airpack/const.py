@@ -14,6 +14,7 @@ PANEL_ICON: Final = "mdi:hvac"
 PANEL_WEBCOMPONENT: Final = "thessla-airpack-panel"
 
 CONF_UNIT_ID: Final = "unit_id"
+CONF_CONNECTION_TYPE: Final = "connection_type"
 CONF_MODEL: Final = "model"
 CONF_SCAN_INTERVAL: Final = "scan_interval"
 CONF_TIMEOUT: Final = "timeout"
@@ -21,9 +22,16 @@ CONF_REQUEST_DELAY: Final = "request_delay"
 CONF_READ_ONLY: Final = "read_only"
 CONF_SPECIAL_FUNCTIONS: Final = "special_functions"
 
+# Transport: the gateway converts Modbus TCP <-> RTU itself (Modbus TCP), or it is a
+# transparent serial <-> TCP bridge and raw RTU frames travel over the socket.
+CONNECTION_MODBUS_TCP: Final = "modbus_tcp"
+CONNECTION_RTU_OVER_TCP: Final = "rtu_over_tcp"
+CONNECTION_TYPES: Final = (CONNECTION_MODBUS_TCP, CONNECTION_RTU_OVER_TCP)
+
 DEFAULT_NAME: Final = "AirPack"
 DEFAULT_PORT: Final = 502
 DEFAULT_UNIT_ID: Final = 10
+DEFAULT_CONNECTION_TYPE: Final = CONNECTION_MODBUS_TCP
 DEFAULT_SCAN_INTERVAL: Final = 30  # s
 DEFAULT_TIMEOUT: Final = 3  # s
 DEFAULT_REQUEST_DELAY: Final = 0  # ms

@@ -3,15 +3,17 @@
     "step": {
       "user": {
         "title": "Thessla Green AirPack4",
-        "description": "Połączenie przez bramkę Modbus TCP → RTU (np. Elfin EW11, Waveshare) podłączoną do gniazda RJ45 nr 10 „AirMobile / Modbus RTU” centrali (9600 8N1).",
+        "description": "Połączenie przez bramkę RS485 ↔ Ethernet / Wi-Fi (np. Elfin EW11, Waveshare) podłączoną do gniazda RJ45 nr 10 „AirMobile / Modbus RTU” centrali (9600 8N1). Wybierz typ połączenia zgodny z trybem bramki: Modbus TCP, gdy bramka sama konwertuje Modbus TCP ↔ RTU, RTU przez TCP, gdy jest transparentnym mostkiem szeregowy ↔ TCP.",
         "data": {
           "name": "Nazwa",
           "host": "Adres bramki / IP",
           "port": "Port TCP",
+          "connection_type": "Typ połączenia",
           "unit_id": "Adres urządzenia Modbus",
           "model": "Model"
         },
         "data_description": {
+          "connection_type": "Modbus TCP: bramka sama konwertuje Modbus TCP na RTU. RTU przez TCP: bramka pracuje w trybie transparentnym (raw TCP), a ramki RTU buduje integracja. Konwersja ma być dokładnie po jednej stronie.",
           "unit_id": "Domyślnie 10 (zakres 10–19).",
           "model": "Wyposażenie dodatkowe wykrywane jest automatycznie."
         }
@@ -21,13 +23,17 @@
         "data": {
           "host": "Adres bramki / IP",
           "port": "Port TCP",
+          "connection_type": "Typ połączenia",
           "unit_id": "Adres urządzenia Modbus"
+        },
+        "data_description": {
+          "connection_type": "Modbus TCP: bramka sama konwertuje Modbus TCP na RTU. RTU przez TCP: bramka pracuje w trybie transparentnym (raw TCP), a ramki RTU buduje integracja. Konwersja ma być dokładnie po jednej stronie."
         }
       }
     },
     "error": {
       "cannot_connect": "Nie można połączyć się z bramką. Sprawdź adres IP i port.",
-      "no_response": "Bramka odpowiada, ale centrala nie. Sprawdź adres urządzenia, okablowanie i ustawienia portu szeregowego bramki (9600 8N1, Modbus TCP→RTU).",
+      "no_response": "Bramka odpowiada, ale centrala nie. Sprawdź adres urządzenia, okablowanie, ustawienia portu szeregowego bramki (9600 8N1) i czy typ połączenia odpowiada trybowi bramki.",
       "invalid_response": "Urządzenie nie wygląda na centralę AirPack.",
       "unknown": "Nieoczekiwany błąd"
     },
@@ -59,6 +65,12 @@
     }
   },
   "selector": {
+    "connection_type": {
+      "options": {
+        "modbus_tcp": "Modbus TCP",
+        "rtu_over_tcp": "RTU przez TCP (bramka transparentna)"
+      }
+    },
     "special_functions": {
       "options": {
         "hood": "Okap",

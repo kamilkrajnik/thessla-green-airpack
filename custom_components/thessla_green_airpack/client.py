@@ -1,6 +1,7 @@
-"""Async Modbus TCP client wrapper for AirPack devices.
+"""Async Modbus client wrapper for AirPack devices (Modbus TCP or RTU over TCP).
 
 * one persistent connection, every request serialised with a lock
+* Modbus TCP framing for converting gateways, raw RTU frames for transparent ones
 * typed errors so the coordinator can tell "register not supported"
   apart from "device unreachable"
 * optional read-only mode that blocks every write before it reaches the socket
@@ -12,9 +13,11 @@ import asyncio
 from collections.abc import Sequence
 import logging
 
+from pymodbus import FramerType
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
+from .const import CONNECTION_MODBUS_TCP, CONNECTION_RTU_OVER_TCP
 from .errors import (
     AirPackError,
     CommunicationError,
@@ -46,6 +49,13 @@ ILLEGAL_DATA_VALUE = 0x03
 GATEWAY_PATH_UNAVAILABLE = 0x0A
 GATEWAY_TARGET_NO_RESPONSE = 0x0B
 
+# Connection type -> pymodbus framer. RTU over TCP sends the RTU frame (with CRC)
+# as-is through a transparent serial <-> TCP gateway that does no Modbus conversion.
+FRAMERS: dict[str, FramerType] = {
+    CONNECTION_MODBUS_TCP: FramerType.SOCKET,
+    CONNECTION_RTU_OVER_TCP: FramerType.RTU,
+}
+
 
 class AirPackClient:
     """Thin, serialised wrapper around pymodbus' AsyncModbusTcpClient."""
@@ -56,6 +66,7 @@ class AirPackClient:
         port: int,
         unit_id: int,
         *,
+        connection_type: str = CONNECTION_MODBUS_TCP,
         timeout: float = 3.0,
         request_delay: float = 0.0,
         read_only: bool = False,
@@ -63,6 +74,8 @@ class AirPackClient:
         self.host = host
         self.port = port
         self.unit_id = unit_id
+        self.connection_type = connection_type
+        self.framer = FRAMERS[connection_type]
         self.timeout = timeout
         self.request_delay = request_delay
         self.read_only = read_only
@@ -81,6 +94,7 @@ class AirPackClient:
         self._client = AsyncModbusTcpClient(
             self.host,
             port=self.port,
+            framer=self.framer,
             timeout=self.timeout,
             retries=1,
             reconnect_delay=0,
