@@ -3,15 +3,17 @@
     "step": {
       "user": {
         "title": "Thessla Green AirPack4",
-        "description": "Connect through a Modbus TCP → RTU gateway (e.g. Elfin EW11, Waveshare) wired to the AirPack RJ45 socket no. 10 \"AirMobile / Modbus RTU\" (9600 8N1).",
+        "description": "Connect through an RS485 ↔ Ethernet / Wi-Fi gateway (e.g. Elfin EW11, Waveshare) wired to the AirPack RJ45 socket no. 10 \"AirMobile / Modbus RTU\" (9600 8N1). Pick the connection type matching the gateway mode: Modbus TCP when the gateway converts Modbus TCP ↔ RTU itself, RTU over TCP when it is a transparent serial ↔ TCP bridge.",
         "data": {
           "name": "Name",
           "host": "Gateway host / IP",
           "port": "TCP port",
+          "connection_type": "Connection type",
           "unit_id": "Modbus device address",
           "model": "Model"
         },
         "data_description": {
+          "connection_type": "Modbus TCP: the gateway converts Modbus TCP to RTU itself. RTU over TCP: the gateway is in transparent (raw TCP) mode and the integration builds the RTU frames. Set the conversion on exactly one side.",
           "unit_id": "AirPack default is 10 (range 10–19).",
           "model": "Optional hardware is detected automatically."
         }
@@ -21,13 +23,17 @@
         "data": {
           "host": "Gateway host / IP",
           "port": "TCP port",
+          "connection_type": "Connection type",
           "unit_id": "Modbus device address"
+        },
+        "data_description": {
+          "connection_type": "Modbus TCP: the gateway converts Modbus TCP to RTU itself. RTU over TCP: the gateway is in transparent (raw TCP) mode and the integration builds the RTU frames. Set the conversion on exactly one side."
         }
       }
     },
     "error": {
       "cannot_connect": "Cannot connect to the gateway. Check IP address and port.",
-      "no_response": "The gateway is reachable but the AirPack does not answer. Check the device address, wiring and gateway serial settings (9600 8N1, Modbus TCP→RTU).",
+      "no_response": "The gateway is reachable but the AirPack does not answer. Check the device address, wiring, gateway serial settings (9600 8N1) and that the connection type matches the gateway mode.",
       "invalid_response": "The device does not look like an AirPack.",
       "unknown": "Unexpected error"
     },
@@ -59,6 +65,12 @@
     }
   },
   "selector": {
+    "connection_type": {
+      "options": {
+        "modbus_tcp": "Modbus TCP",
+        "rtu_over_tcp": "RTU over TCP (transparent gateway)"
+      }
+    },
     "special_functions": {
       "options": {
         "hood": "Hood",

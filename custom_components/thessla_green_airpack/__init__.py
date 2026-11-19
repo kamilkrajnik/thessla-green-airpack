@@ -1,4 +1,4 @@
-"""Thessla Green AirPack4 integration (Modbus TCP)."""
+"""Thessla Green AirPack4 integration (Modbus TCP / RTU over TCP)."""
 
 from __future__ import annotations
 
@@ -9,10 +9,12 @@ from homeassistant.helpers.typing import ConfigType
 
 from .client import AirPackClient
 from .const import (
+    CONF_CONNECTION_TYPE,
     CONF_READ_ONLY,
     CONF_REQUEST_DELAY,
     CONF_TIMEOUT,
     CONF_UNIT_ID,
+    DEFAULT_CONNECTION_TYPE,
     DEFAULT_READ_ONLY,
     DEFAULT_REQUEST_DELAY,
     DEFAULT_TIMEOUT,
@@ -77,6 +79,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: AirPackConfigEntry) -> b
         entry.data[CONF_HOST],
         entry.data[CONF_PORT],
         entry.data[CONF_UNIT_ID],
+        # Entries created before this option existed have no key: Modbus TCP.
+        connection_type=entry.data.get(CONF_CONNECTION_TYPE, DEFAULT_CONNECTION_TYPE),
         timeout=entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT),
         request_delay=entry.options.get(CONF_REQUEST_DELAY, DEFAULT_REQUEST_DELAY) / 1000,
         read_only=entry.options.get(CONF_READ_ONLY, DEFAULT_READ_ONLY),

@@ -166,26 +166,32 @@ SELECTS = {
  "pres_check_day": (("Filter check day","Dzień kontroli filtrów"), WEEK),
 }
 
+CONNECTION_TYPE_HELP = ("Modbus TCP: the gateway converts Modbus TCP to RTU itself. RTU over TCP: the gateway is in transparent (raw TCP) mode and the integration builds the RTU frames. Set the conversion on exactly one side.",
+                        "Modbus TCP: bramka sama konwertuje Modbus TCP na RTU. RTU przez TCP: bramka pracuje w trybie transparentnym (raw TCP), a ramki RTU buduje integracja. Konwersja ma być dokładnie po jednej stronie.")
 CONFIG = {
  "step": {
   "user": {
    "title": ("Thessla Green AirPack4", "Thessla Green AirPack4"),
-   "description": ("Connect through a Modbus TCP → RTU gateway (e.g. Elfin EW11, Waveshare) wired to the AirPack RJ45 socket no. 10 \"AirMobile / Modbus RTU\" (9600 8N1).",
-                   "Połączenie przez bramkę Modbus TCP → RTU (np. Elfin EW11, Waveshare) podłączoną do gniazda RJ45 nr 10 „AirMobile / Modbus RTU” centrali (9600 8N1)."),
+   "description": ("Connect through an RS485 ↔ Ethernet / Wi-Fi gateway (e.g. Elfin EW11, Waveshare) wired to the AirPack RJ45 socket no. 10 \"AirMobile / Modbus RTU\" (9600 8N1). Pick the connection type matching the gateway mode: Modbus TCP when the gateway converts Modbus TCP ↔ RTU itself, RTU over TCP when it is a transparent serial ↔ TCP bridge.",
+                   "Połączenie przez bramkę RS485 ↔ Ethernet / Wi-Fi (np. Elfin EW11, Waveshare) podłączoną do gniazda RJ45 nr 10 „AirMobile / Modbus RTU” centrali (9600 8N1). Wybierz typ połączenia zgodny z trybem bramki: Modbus TCP, gdy bramka sama konwertuje Modbus TCP ↔ RTU, RTU przez TCP, gdy jest transparentnym mostkiem szeregowy ↔ TCP."),
    "data": {"name": ("Name","Nazwa"), "host": ("Gateway host / IP","Adres bramki / IP"), "port": ("TCP port","Port TCP"),
+            "connection_type": ("Connection type","Typ połączenia"),
             "unit_id": ("Modbus device address","Adres urządzenia Modbus"), "model": ("Model","Model")},
-   "data_description": {"unit_id": ("AirPack default is 10 (range 10–19).","Domyślnie 10 (zakres 10–19)."),
+   "data_description": {"connection_type": CONNECTION_TYPE_HELP,
+                        "unit_id": ("AirPack default is 10 (range 10–19).","Domyślnie 10 (zakres 10–19)."),
                         "model": ("Optional hardware is detected automatically.","Wyposażenie dodatkowe wykrywane jest automatycznie.")},
   },
   "reconfigure": {
    "title": ("Change connection","Zmiana połączenia"),
-   "data": {"host": ("Gateway host / IP","Adres bramki / IP"), "port": ("TCP port","Port TCP"), "unit_id": ("Modbus device address","Adres urządzenia Modbus")},
+   "data": {"host": ("Gateway host / IP","Adres bramki / IP"), "port": ("TCP port","Port TCP"),
+            "connection_type": ("Connection type","Typ połączenia"), "unit_id": ("Modbus device address","Adres urządzenia Modbus")},
+   "data_description": {"connection_type": CONNECTION_TYPE_HELP},
   },
  },
  "error": {
   "cannot_connect": ("Cannot connect to the gateway. Check IP address and port.","Nie można połączyć się z bramką. Sprawdź adres IP i port."),
-  "no_response": ("The gateway is reachable but the AirPack does not answer. Check the device address, wiring and gateway serial settings (9600 8N1, Modbus TCP→RTU).",
-                  "Bramka odpowiada, ale centrala nie. Sprawdź adres urządzenia, okablowanie i ustawienia portu szeregowego bramki (9600 8N1, Modbus TCP→RTU)."),
+  "no_response": ("The gateway is reachable but the AirPack does not answer. Check the device address, wiring, gateway serial settings (9600 8N1) and that the connection type matches the gateway mode.",
+                  "Bramka odpowiada, ale centrala nie. Sprawdź adres urządzenia, okablowanie, ustawienia portu szeregowego bramki (9600 8N1) i czy typ połączenia odpowiada trybowi bramki."),
   "invalid_response": ("The device does not look like an AirPack.","Urządzenie nie wygląda na centralę AirPack."),
   "unknown": ("Unexpected error","Nieoczekiwany błąd"),
  },
@@ -246,7 +252,10 @@ def build(i):
     ent["fan"] = {"ventilation": {"name": ("Ventilation","Wentylacja")[i],
                   "state_attributes": {"preset_mode": {"state": {s: v[i] for s, v in MODES.items()}},
                                        "airflow": {"name": ("Airflow","Intensywność")[i]}}}}
-    selector = {"special_functions": {"options": {
+    selector = {"connection_type": {"options": {
+        "modbus_tcp": ("Modbus TCP","Modbus TCP")[i],
+        "rtu_over_tcp": ("RTU over TCP (transparent gateway)","RTU przez TCP (bramka transparentna)")[i]}},
+        "special_functions": {"options": {
         "hood": ("Hood","Okap")[i], "fireplace": ("Fireplace","Kominek")[i], "airing": ("Airing","Wietrzenie")[i],
         "open_windows": ("Open windows","Otwarte okna")[i], "empty_house": ("Empty house","Pusty dom")[i]}},
         "equipment": {"options": {
